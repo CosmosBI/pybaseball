@@ -1,7 +1,9 @@
 import pandas as pd
-import requests
 
 from . import cache
+from .datasources.bref import BRefSession
+
+session = BRefSession()
 
 # pylint: disable=line-too-long
 _URL = "https://www.baseball-reference.com/draft/?year_ID={year}&draft_round={draft_round}&draft_type=junreg&query_type=year_round&"
@@ -9,13 +11,23 @@ _URL = "https://www.baseball-reference.com/draft/?year_ID={year}&draft_round={dr
 
 def get_draft_results(year: int, draft_round: int) -> pd.DataFrame:
     url = _URL.format(year=year, draft_round=draft_round)
-    res = requests.get(url, timeout=None).content
+    res = session.get(url, timeout=None).content
     draft_results = pd.read_html(res)
     return draft_results
 
 
 @cache.df_cache()
 def amateur_draft(year: int, draft_round: int, keep_stats: bool = True) -> pd.DataFrame:
+    """
+    Retrieves the MLB amateur draft results by year and round.
+
+    ARGUMENTS
+        year: The year for which you wish to retrieve draft results.
+        draft_round: The round for which you wish to retrieve draft results. There is no distinction made 
+            between the competitive balance, supplementary, and main portions of a round.
+        keep_stats: A boolean parameter that controls whether the major league stats of each draftee is 
+            displayed. Default set to true.
+    """
     draft_results = get_draft_results(year, draft_round)
     draft_results = pd.concat(draft_results)
     draft_results = postprocess(draft_results)

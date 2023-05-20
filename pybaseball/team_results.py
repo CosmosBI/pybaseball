@@ -4,11 +4,13 @@ from typing import Optional
 from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
-import requests
 
 from pybaseball.utils import get_first_season, most_recent_season
 
 from . import cache
+from .datasources.bref import BRefSession
+
+session = BRefSession()
 
 # TODO: retrieve data for all teams? a full season's worth of results
 
@@ -18,7 +20,7 @@ def get_soup(season: Optional[int], team: str) -> BeautifulSoup:
         season = most_recent_season()
     url = "http://www.baseball-reference.com/teams/{}/{}-schedule-scores.shtml".format(team, season)
     print(url)
-    s = requests.get(url).content
+    s = session.get(url).content
     return BeautifulSoup(s, "lxml")
 
 def get_table(soup: BeautifulSoup, team: str) -> pd.DataFrame:
@@ -101,6 +103,15 @@ def make_numeric(data: pd.DataFrame) -> pd.DataFrame:
 
 @cache.df_cache()
 def schedule_and_record(season: int, team: str) -> pd.DataFrame:
+    """ 
+    Retrieve a team's game-level results for a given season, including win/loss/tie result, score, attendance, 
+    and winning/losing/saving pitcher. If the season is incomplete, it will provide scheduling information for 
+    future games.
+
+    ARGUMENTS
+        season: Integer. The season for which you want a team's record data.
+        team: String. The abbreviation of the team for which you are requesting data (e.g. "PHI", "BOS", "LAD").
+    """
     # retrieve html from baseball reference
     # sanatize input
     team = team.upper()
